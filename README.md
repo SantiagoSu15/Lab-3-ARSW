@@ -74,13 +74,55 @@ edu.eci.arsw
 1. Ejecuta el programa de productor/consumidor y monitorea CPU con **jVisualVM**. ¿Por qué el consumo alto? ¿Qué clase lo causa?  
 2. Ajusta la implementación para **usar CPU eficientemente** cuando el **productor es lento** y el **consumidor es rápido**. Valida de nuevo con VisualVM.  
 3. Ahora **productor rápido** y **consumidor lento** con **límite de stock** (cola acotada): garantiza que el límite se respete **sin espera activa** y valida CPU con un stock pequeño.
-
-> Nota: la Parte I se realiza en el repositorio dedicado https://github.com/DECSIS-ECI/Lab_busy_wait_vs_wait_notify — clona ese repo y realiza los ejercicios allí; contiene el código de productor/consumidor, variantes con busy-wait y las soluciones usando wait()/notify(), además de instrucciones para ejecutar y validar con jVisualVM.
-
-
-> Usa monitores de Java: **`synchronized` + `wait()` + `notify/notifyAll()`**, evitando *busy-wait*.
+---
+1. la clase que causa el alto consumo es la clase `busyspinqueue`, esto debido a que utiliza espera activa en estos fragmentos de codigo
+```bash
+while (true) {
+    if (q.size() < capacity) {
+        q.addLast(item);
+        return;
+    }
+    Thread.onSpinWait();
+}
+```
+y
+```bash
+while (true) {
+    T v = q.pollFirst();
+    if (v != null)
+        return v;
+    Thread.onSpinWait();
+}
+```
+esto quiere decir que el hilo entra en un ciclo infinito en donde no se bloquea, duerme o libera cpu sino que se mantiene constantemente ejecutando el ciclo infinito sin cambio alguno .
 
 ---
+2. tras realizar los cambios para productor lento / consumidor rapido se realizo la siguiente prueba
+```bash
+     -Dmode=spin \
+     -Dproducers=1 \
+     -Dconsumers=1 \
+     -Dcapacity=2 \
+     -DprodDelayMs=0 \
+     -DconsDelayMs=100 \
+     -DdurationSec=20 \
+```
+y se obtuvieron los siguientes resultados
+<img width="1342" height="915" alt="image" src="https://github.com/user-attachments/assets/c62e5bd1-46bd-4349-86d7-57c613dd52c5" />
+
+---
+3. tras realizar los cambios para productor rapido / consumidor lento se realizo la siguiente prueba
+```bash
+     -Dmode=spin \
+     -Dproducers=1 \
+     -Dconsumers=1 \
+     -Dcapacity=2 \
+     -DprodDelayMs=100 \
+     -DconsDelayMs=0 \
+     -DdurationSec=20 \
+```
+y se obtuvieron los siguientes resultados
+<img width="1342" height="915" alt="image" src="https://github.com/user-attachments/assets/d22d22e5-1764-407c-8019-518789f74837" />
 
 ## Parte II — (Antes de terminar la clase) Búsqueda distribuida y condición de parada
 Reescribe el **buscador de listas negras** para que la búsqueda **se detenga tan pronto** el conjunto de hilos detecte el número de ocurrencias que definen si el host es confiable o no (`BLACK_LIST_ALARM_COUNT`). Debe:
