@@ -5,6 +5,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -116,7 +117,7 @@ public final class ControlFrame extends JFrame {
       sb.append("\n--- INVARIANTE ---\n");
       sb.append(String.format("Fórmula: N*H - (M/2)*F%n"));
       sb.append(String.format("= %d*%d - (%d/2)*%d%n", 
-        pop.size(), manager.getInitialHealth(), manager.getDamage(), fights));
+        manager.getInitialPopulationSize(), manager.getInitialHealth(), manager.getDamage(), fights));
       sb.append(String.format("= %d%n", expectedHealth));
       sb.append("\n");
       

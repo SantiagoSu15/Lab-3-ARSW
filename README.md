@@ -1,5 +1,7 @@
 
 # ARSW — (Java 21): **Immortals & Synchronization** — con UI Swing
+### Juan Felipe Rangel & Santiago Suarez
+
 
 **Escuela Colombiana de Ingeniería – Arquitecturas de Software**  
 Laboratorio de concurrencia: condiciones de carrera, sincronización, suspensión cooperativa y *deadlocks*, con interfaz **Swing** tipo *Highlander Simulator*.
@@ -142,7 +144,7 @@ Reescribe el **buscador de listas negras** para que la búsqueda **se detenga ta
 4. **Pausa correcta**: asegura que **todos** los hilos queden pausados **antes** de leer/imprimir la salud; implementa **Resume** (ya disponible).  
 5. Haz *click* repetido y valida consistencia. ¿Se mantiene el invariante?  
 6. **Regiones críticas**: identifica y sincroniza las secciones de pelea para evitar carreras; si usas múltiples *locks*, anida con **orden consistente**:
-   ```java
+   ```
    synchronized (lockA) {
      synchronized (lockB) {
        // ...
@@ -165,5 +167,102 @@ esto debido a que pese a que el juego se pausa no significa que todos los hilos 
 
 ademas se agregaron indicadores para poder verificar la vida esperada y la vida obtenida y facilitar la identificacion de posibles condiciones carrera.
 <img width="610" height="437" alt="image" src="https://github.com/user-attachments/assets/164b71c0-a5db-42bc-8a2a-5c869693c913" />
+
+6.  El atributo de vida de cada inmortal era compartido, se decidio por cambiar a AtomicInteger.
+```
+synchronized (first) {
+   synchronized (second) {
+           if (this.health <= 0 || other.health <= 0) return;
+   other.health -= this.damage;      
+           this.health += this.damage / 2;   
+           scoreBoard.recordFight();         
+    }
+}
+```
+```
+ private AtomicInteger health;
+```
+TotalHealth En ImmortalManager Se volvio Sincronizado
+
+7. Despues de pruebas no se detecto ningun deadlock.
+Pruebas en el archivo threads_report.txt
+![Imagen](/img/Deadloc1.png)
+![Imagen](/img/Deadloc2.png)
+![Imagen](/img/Deadloc3.png)
+
+8. Para evitar Deadlocks en el modo Ingenuo se decidio usar tryLock, este se crea en el objeto 
+Si logra conseguir ambos locks se ejecuta la lucha en el try y apenas acaba los libera para poder realizar otra lucha
+en caso de que no revisa si es dueño de algun lock para liberarlo y poder volver a buscar otra lcuha
+
+```
+private ReentrantLock lock = new ReentrantLock();
+
+private void fightNaive(Immortal other) throws InterruptedException {
+    if((lock.tryLock(1000, TimeUnit.MILLISECONDS)) && (other.lock.tryLock(1000, TimeUnit.MILLISECONDS))){
+      try{
+       .... 
+      }finally{
+        lock.unlock();
+        other.lock.unlock();
+      }
+    }else{
+      if(lock.isHeldByCurrentThread()) lock.unlock();
+      if(other.lock.isHeldByCurrentThread()) other.lock.unlock();
+    }
+  }
+```
+9. Se hizo la prueba con max 1000 debido que no dejaba con un numero mayor
+![imagen](/img/img.png)
+10. Para eliminar los inmortales muertos se decidio cambiar de coleccion: List -> CopyOnWriteArrayList, ya que es una coleccion concurrent
+Para manejar la limpieza se decidio crear un hilo aparte para limpiar cada vez que un inmortal muere:
+```
+futures.add(exec.submit(()->{
+      controller.registerThread();
+      try{
+        while (!exec.isShutdown()){
+          controller.awaitIfPaused();
+          if (!controller.paused()) {
+            for(Immortal im : population){
+              if(im.getHealth() <= 0){
+                population.remove(im);
+                im.setRunning(false);
+              }
+            }
+          }
+          Thread.sleep(1000);
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }finally {
+        controller.unregisterThread();
+      }
+
+    }));
+```
+![imagen](/img/img_1.png)
+![imagen](/img/img_2.png)
+11. En stop Ahora cada hilo su banderita se pone en false, espera que los hilos terminen  y hace que el ExecutorService no reciba nuevas tareas y limpia recursos
+```
+
+for (Immortal im : population) {
+im.stop();
+}
+
+    if (exec != null) {
+      exec.shutdown();
+      try {
+        if (!exec.awaitTermination(5, TimeUnit.SECONDS)) {
+          exec.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        exec.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+      exec = null;
+    }
+
+    futures.clear();
+}
+```
 
 ---

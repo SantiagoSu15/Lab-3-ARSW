@@ -66,16 +66,17 @@ public final class PauseController {
   public void awaitIfPaused() throws InterruptedException {
     lock.lockInterruptibly();
     try {
-      if (paused) {
+      while (paused) {
         pausedThreads++;
-        allPaused.signalAll();
-        while (paused) {
-          unpaused.await();
+        if (pausedThreads == activeThreads) {
+          allPaused.signalAll();
         }
+        unpaused.await();
         pausedThreads--;
       }
     } finally {
       lock.unlock();
     }
   }
+
 }
