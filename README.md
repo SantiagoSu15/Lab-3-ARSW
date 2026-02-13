@@ -70,6 +70,8 @@ edu.eci.arsw
 
 # Actividades del laboratorio
 
+## link del repositorio con el codigo del punto 1 https://github.com/juanfe-rangel/busy_wait_vs_wait_notify.git
+
 ## Parte I — (Antes de terminar la clase) `wait/notify`: Productor/Consumidor
 1. Ejecuta el programa de productor/consumidor y monitorea CPU con **jVisualVM**. ¿Por qué el consumo alto? ¿Qué clase lo causa?  
 2. Ajusta la implementación para **usar CPU eficientemente** cuando el **productor es lento** y el **consumidor es rápido**. Valida de nuevo con VisualVM.  
@@ -152,57 +154,16 @@ Reescribe el **buscador de listas negras** para que la búsqueda **se detenga ta
 9. Valida con **N=100, 1000 o 10000** inmortales. Si falla el invariante, revisa la pausa y las regiones críticas.  
 10. **Remover inmortales muertos** sin bloquear la simulación: analiza si crea una **condición de carrera** con muchos hilos y corrige **sin sincronización global** (colección concurrente o enfoque *lock-free*).  
 11. Implementa completamente **STOP** (apagado ordenado).
+---
+1,2 y 3. se realiza una simulacion con 2 inmortales en donde cada uno tiene 10 de vida y 10 de ataque, por lo que se puede ver que luego de un ataque uno queda con 0 de vida y el otro con 10 + 10/2 (ataque)
+<img width="617" height="434" alt="image" src="https://github.com/user-attachments/assets/877b6e6e-6484-4b25-be3d-a10106252a8c" />
+como se puede observar la suma total de la vida de ambos inmortales no es la que deberia ser, puesto que con cada lucha este total decrece en la cantidad de ataques multiplicado por la mitad del daño de ataque. Por lo tanto se puede decir que el invariante no se cumple.
+
+esto debido a que pese a que el juego se pausa no significa que todos los hilos se pausen, por lo tanto cuando este se detiene puede que aun haya hilos ejecutandose lo que haria que la suma de vida sea una cantidad erronea (se aprecia mejor en ejemplos con mas hilos)
+
+4 y 5. para asegurar una pausa correcta se implemento un contador en donde cuando la bandera de pausa se activa, todos los hilos empiezan a pausarse y aumentar el contador de hilos pausados, hasta que el contador no sea igual al numero total de hilos (inmortales) no se empezara a hacer el calculo de vida.
+
+ademas se agregaron indicadores para poder verificar la vida esperada y la vida obtenida y facilitar la identificacion de posibles condiciones carrera.
+<img width="610" height="437" alt="image" src="https://github.com/user-attachments/assets/164b71c0-a5db-42bc-8a2a-5c869693c913" />
 
 ---
-
-## Entregables
-
-1. **Código fuente** (Java 21) con la UI funcionando.  
-2. **`Informe de laboratorio en formato pdf`** con:
-   - Parte I: diagnóstico de CPU y cambios para eliminar espera activa.  
-   - Parte II: diseño de **parada temprana** y cómo evitas condiciones de carrera en el contador.  
-   - Parte III:  
-     - Regiones críticas y estrategia adoptada (**orden total** o **tryLock+timeout**).  
-     - Evidencia de *deadlock* (si ocurrió) con `jstack` y corrección aplicada.  
-     - Validación del **invariante** con **Pause & Check** (distintos N).  
-     - Estrategia para **remover inmortales muertos** sin sincronización global.
-3. Instrucciones de ejecución si cambias *defaults*.
-
----
-
-## Criterios de evaluación (10 pts)
-
-- (3) **Concurrencia correcta**: sin *data races*; sincronización bien localizada; no hay espera activa.  
-- (2) **Pausa/Reanudar**: consistencia del estado e invariante bajo **Pause & Check**.  
-- (2) **Robustez**: corre con N alto; sin `ConcurrentModificationException`, sin *deadlocks* no gestionados.  
-- (1.5) **Calidad**: arquitectura clara, nombres y comentarios; separación UI/lógica.  
-- (1.5) **Documentación**: **`RESPUESTAS.txt`** claro con evidencia (dumps/capturas) y justificación técnica.
-
----
-
-## Tips y configuración útil
-
-- **Estrategias de pelea**:  
-  - `-Dfight=naive` → útil para **reproducir** carreras y *deadlocks*.  
-  - `-Dfight=ordered` → **evita** *deadlocks* (orden total por nombre/id).
-- **Pausa cooperativa**: usa `PauseController` (Lock/Condition), **sin** `suspend/resume/stop`.  
-- **Colecciones**: evita estructuras no seguras; prefiere inmutabilidad o colecciones concurrentes.  
-- **Diagnóstico**: `jps`, `jstack`, **jVisualVM**; revisa *thread dumps* cuando sospeches *deadlock*.  
-- **Virtual Threads**: favorecen esperar con bloqueo (no *busy-wait*); usa timeouts.
-
----
-
-## Cómo correr pruebas
-
-```bash
-mvn clean verify
-```
-
-Incluye compilación y pruebas JUnit.
-
----
-
-## Créditos y licencia
-
-Laboratorio basado en el enunciado histórico del curso (Highlander, Productor/Consumidor, Búsqueda distribuida), modernizado a **Java 21**.  
-<a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc/4.0/88x31.png" /></a><br />Este contenido hace parte del curso Arquitecturas de Software (ECI) y está licenciado como <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International License</a>.
