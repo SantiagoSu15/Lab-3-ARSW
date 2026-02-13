@@ -129,34 +129,31 @@ y se obtuvieron los siguientes resultados
 <img width="1342" height="915" alt="image" src="https://github.com/user-attachments/assets/d22d22e5-1764-407c-8019-518789f74837" />
 
 ## Parte II — (Antes de terminar la clase) Búsqueda distribuida y condición de parada
-Reescribe el **buscador de listas negras** para que la búsqueda **se detenga tan pronto** el conjunto de hilos detecte el número de ocurrencias que definen si el host es confiable o no (`BLACK_LIST_ALARM_COUNT`). Debe:
-- **Finalizar anticipadamente** (no recorrer servidores restantes) y **retornar** el resultado.  
-- Garantizar **ausencia de condiciones de carrera** sobre el contador compartido.
 
-> Puedes usar `AtomicInteger` o sincronización mínima sobre la región crítica del contador.
+## link del repositorio con el codigo del punto 1 https://github.com/SantiagoSu15/Lab-1-ARSW/tree/lab-3
+Nota: Los cambios se realizaron en la rama lab-3
+En la clase HostBlackListsValidator se puso un Contador Global Atomic para que los hilos pudieran tener una referencia de cuantas veces encontraron una lista negra
+Una vez encontrada y llegada al limite se detienen 
+```
+private void busqueda(){
+        for(int i = a; i <= b; i++){
+            if(this.contadorGlobal.get() >= HostBlackListsValidator.BLACK_LIST_ALARM_COUNT ){
+                break;
+            }
+            if(blacklist.isInBlackListServer(i,this.ipAddr)){
+                blackListOcurrences.add(i);
+                vecesEnLista++;
+                this.incrementar();
+            }
+        }    
+    }
+```
 
 ---
 
-## Parte III — (Avance) Sincronización y *Deadlocks* con *Highlander Simulator*
-1. Revisa la simulación: N inmortales; cada uno **ataca** a otro. El que ataca **resta M** al contrincante y **suma M/2** a su propia vida.  
-2. **Invariante**: con N y salud inicial `H`, la suma total debería permanecer constante (salvo durante un update). Calcula ese valor y úsalo para validar.  
-3. Ejecuta la UI y prueba **“Pause & Check”**. ¿Se cumple el invariante? Explica.  
-4. **Pausa correcta**: asegura que **todos** los hilos queden pausados **antes** de leer/imprimir la salud; implementa **Resume** (ya disponible).  
-5. Haz *click* repetido y valida consistencia. ¿Se mantiene el invariante?  
-6. **Regiones críticas**: identifica y sincroniza las secciones de pelea para evitar carreras; si usas múltiples *locks*, anida con **orden consistente**:
-   ```
-   synchronized (lockA) {
-     synchronized (lockB) {
-       // ...
-     }
-   }
-   ```
-7. Si la app se **detiene** (posible *deadlock*), usa **`jps`** y **`jstack`** para diagnosticar.  
-8. Aplica una **estrategia** para corregir el *deadlock* (p. ej., **orden total** por nombre/id, o **`tryLock(timeout)`** con reintentos y *backoff*).  
-9. Valida con **N=100, 1000 o 10000** inmortales. Si falla el invariante, revisa la pausa y las regiones críticas.  
-10. **Remover inmortales muertos** sin bloquear la simulación: analiza si crea una **condición de carrera** con muchos hilos y corrige **sin sincronización global** (colección concurrente o enfoque *lock-free*).  
-11. Implementa completamente **STOP** (apagado ordenado).
+
 ---
+## Parte 3
 1,2 y 3. se realiza una simulacion con 2 inmortales en donde cada uno tiene 10 de vida y 10 de ataque, por lo que se puede ver que luego de un ataque uno queda con 0 de vida y el otro con 10 + 10/2 (ataque)
 <img width="617" height="434" alt="image" src="https://github.com/user-attachments/assets/877b6e6e-6484-4b25-be3d-a10106252a8c" />
 como se puede observar la suma total de la vida de ambos inmortales no es la que deberia ser, puesto que con cada lucha este total decrece en la cantidad de ataques multiplicado por la mitad del daño de ataque. Por lo tanto se puede decir que el invariante no se cumple.
