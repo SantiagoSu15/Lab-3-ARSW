@@ -1,12 +1,24 @@
 package edu.eci.arsw.highlandersim;
 
-import edu.eci.arsw.immortals.Immortal;
-import edu.eci.arsw.immortals.ImmortalManager;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTextArea;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
+
+import edu.eci.arsw.immortals.Immortal;
+import edu.eci.arsw.immortals.ImmortalManager;
 
 public final class ControlFrame extends JFrame {
 
@@ -75,19 +87,54 @@ public final class ControlFrame extends JFrame {
 
   private void onPauseAndCheck(ActionEvent e) {
     if (manager == null) return;
-    manager.pause();
-    List<Immortal> pop = manager.populationSnapshot();
-    long sum = 0;
-    StringBuilder sb = new StringBuilder();
-    for (Immortal im : pop) {
-      int h = im.getHealth();
-      sum += h;
-      sb.append(String.format("%-14s : %5d%n", im.name(), h));
+    try {
+      // Pausar y esperar a que TODOS los hilos estén efectivamente pausados
+      manager.pauseAndWaitAll();
+      
+      // Ahora es seguro leer el estado sin condiciones de carrera
+      List<Immortal> pop = manager.populationSnapshot();
+      long actualHealth = 0;
+      StringBuilder sb = new StringBuilder();
+      
+      sb.append("=== ESTADO DE LOS INMORTALES ===\n\n");
+      for (Immortal im : pop) {
+        int h = im.getHealth();
+        actualHealth += h;
+        sb.append(String.format("%-14s : %5d%n", im.name(), h));
+      }
+      
+      sb.append("\n================================\n");
+      long fights = manager.scoreBoard().totalFights();
+      long expectedHealth = manager.expectedTotalHealth();
+      sb.append(String.format("Peleas totales: %d%n", fights));
+      sb.append(String.format("Salud actual:   %d%n", actualHealth));
+      sb.append(String.format("Salud esperada: %d%n", expectedHealth));
+      
+      long diff = Math.abs(actualHealth - expectedHealth);
+      boolean invariantHolds = (diff == 0);
+      
+      sb.append("\n--- INVARIANTE ---\n");
+      sb.append(String.format("Fórmula: N*H - (M/2)*F%n"));
+      sb.append(String.format("= %d*%d - (%d/2)*%d%n", 
+        pop.size(), manager.getInitialHealth(), manager.getDamage(), fights));
+      sb.append(String.format("= %d%n", expectedHealth));
+      sb.append("\n");
+      
+      if (invariantHolds) {
+        sb.append(" INVARIANTE SE CUMPLE\n");
+        sb.append(" Todos los hilos fueron pausados correctamente\n");
+        sb.append(" No hay condiciones de carrera\n");
+      } else {
+        sb.append("INVARIANTE NO SE CUMPLE\n");
+        sb.append(String.format("  Diferencia: %d%n", diff));
+        sb.append("  Posible condición de carrera\n");
+      }
+      
+      output.setText(sb.toString());
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+      output.setText("Error: Interrupción durante la pausa\n");
     }
-    sb.append("--------------------------------\n");
-    sb.append("Total Health: ").append(sum).append('\n');
-    sb.append("Score (fights): ").append(manager.scoreBoard().totalFights()).append('\n');
-    output.setText(sb.toString());
   }
 
   private void onResume(ActionEvent e) {

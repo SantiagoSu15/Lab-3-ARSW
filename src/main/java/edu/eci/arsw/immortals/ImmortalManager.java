@@ -1,13 +1,13 @@
 package edu.eci.arsw.immortals;
 
-import edu.eci.arsw.concurrency.PauseController;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import edu.eci.arsw.concurrency.PauseController;
 
 public final class ImmortalManager implements AutoCloseable {
   private final List<Immortal> population = new ArrayList<>();
@@ -42,6 +42,11 @@ public final class ImmortalManager implements AutoCloseable {
   }
 
   public void pause() { controller.pause(); }
+
+  public void pauseAndWaitAll() throws InterruptedException {
+    controller.pauseAndWaitAll();
+  }
+
   public void resume() { controller.resume(); }
   public void stop() {
     for (Immortal im : population) im.stop();
@@ -59,6 +64,21 @@ public final class ImmortalManager implements AutoCloseable {
     for (Immortal im : population) sum += im.getHealth();
     return sum;
   }
+
+  /**
+   * Calcula el invariante esperado de salud total.
+   * Invariante: SaludTotal = N * H - (M/2) * F
+   * donde N = número de inmortales, H = salud inicial, M = daño, F = número de peleas
+   */
+  public long expectedTotalHealth() {
+    long fights = scoreBoard.totalFights();
+    long initialTotal = (long) population.size() * initialHealth;
+    long healthLoss = (damage / 2) * fights;
+    return initialTotal - healthLoss;
+  }
+
+  public int getInitialHealth() { return initialHealth; }
+  public int getDamage() { return damage; }
 
   public List<Immortal> populationSnapshot() {
     return Collections.unmodifiableList(new ArrayList<>(population));

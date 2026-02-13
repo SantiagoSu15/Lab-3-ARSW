@@ -1,10 +1,10 @@
 package edu.eci.arsw.immortals;
 
-import edu.eci.arsw.concurrency.PauseController;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
+
+import edu.eci.arsw.concurrency.PauseController;
 
 public final class Immortal implements Runnable {
   private final String name;
@@ -30,6 +30,7 @@ public final class Immortal implements Runnable {
   public void stop() { running = false; }
 
   @Override public void run() {
+    controller.registerThread();
     try {
       while (running) {
         controller.awaitIfPaused();
@@ -43,6 +44,8 @@ public final class Immortal implements Runnable {
       }
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
+    } finally {
+      controller.unregisterThread();
     }
   }
 
